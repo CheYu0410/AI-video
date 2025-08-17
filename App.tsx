@@ -6,15 +6,21 @@ import React, {useMemo, useState} from 'react';
 import {ErrorModal} from './components/ErrorModal';
 import {SparklesIcon, VideoCameraIcon} from './components/icons';
 import {SavingProgressPage} from './components/SavingProgressPage';
+import {StyleRefiner} from './components/StyleRefiner';
 import {VideoGrid} from './components/VideoGrid';
 import {VideoPlayer} from './components/VideoPlayer';
 import {MOCK_VIDEOS} from './constants';
 import {useTranslations} from './i18n';
 import {Video} from './types';
 
-import {GeneratedVideo, GoogleGenAI} from '@google/genai';
+import {
+  GeneratedVideo,
+  GoogleGenAI,
+  GenerateContentResponse,
+} from '@google/genai';
 
 const VEO_MODEL_NAME = 'veo-2.0-generate-001';
+const GEMINI_MODEL_NAME = 'gemini-2.5-flash';
 
 const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
 
@@ -87,7 +93,6 @@ export const App: React.FC = () => {
   const [generationError, setGenerationError] = useState<string[] | null>(
     null,
   );
-  const [newPrompt, setNewPrompt] = useState('');
   const {language, setLanguage, t} = useTranslations();
 
   const handlePlayVideo = (video: Video) => {
@@ -105,7 +110,9 @@ export const App: React.FC = () => {
       ),
     );
     if (playingVideo?.id === videoId) {
-      setPlayingVideo((prev) => (prev ? {...prev, isFavorite: !prev.isFavorite} : null));
+      setPlayingVideo((prev) =>
+        prev ? {...prev, isFavorite: !prev.isFavorite} : null,
+      );
     }
   };
 
@@ -124,11 +131,34 @@ export const App: React.FC = () => {
     });
   }, [videos]);
 
+  const handleOptimizePrompt = async (promptText: string): Promise<string> => {
+    try {
+      const instruction =
+        language === 'zh-TW'
+          ? `請將以下用於影片生成的提示詞變得更豐富、更有電影感、更詳細。直接回覆優化後的提示詞，不要有任何額外說明。語言：繁體中文。使用者提示詞：「${promptText}」`
+          : `Enhance and expand the following user prompt for a video generation model. Make it more vivid, detailed, and cinematic. Respond ONLY with the new prompt, without any extra explanation. Language: English. User prompt: "${promptText}"`;
+
+      const response: GenerateContentResponse = await ai.models.generateContent(
+        {
+          model: GEMINI_MODEL_NAME,
+          contents: instruction,
+        },
+      );
+
+      const optimizedText = response.text.trim();
+      console.log('Optimized prompt:', optimizedText);
+      return optimizedText || promptText; // Fallback to original if response is empty
+    } catch (error) {
+      console.error('Prompt optimization failed:', error);
+      // If optimization fails, just return the original prompt to not break the flow.
+      return promptText;
+    }
+  };
+
   const handleGenerateFromPrompt = async (promptText: string) => {
     if (!promptText.trim()) return;
     setIsSaving(true);
     setGenerationError(null);
-    setNewPrompt(''); // Clear input immediately
 
     try {
       console.log('Generating video from new prompt...', promptText);
@@ -224,42 +254,14 @@ export const App: React.FC = () => {
               <option value="zh-TW">{t.traditionalChinese}</option>
             </select>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 text-transparent bg-clip-text inline-flex items-center gap-4">
-            <VideoCameraIcon className="w-10 h-10 md:w-12 md:h-12" />
-            <span>{t.galleryTitle}</span>
+          <h1 className="text-4xl md:text-5xl font-bold inline-flex items-center gap-4">
+            <VideoCameraIcon className="w-10 h-10 md:w-12 md:h-12 text-purple-400" />
+            <span className="animated-title">{t.galleryTitle}</span>
           </h1>
           <p className="text-gray-400 mt-2 text-lg">{t.gallerySubtitle}</p>
         </header>
 
-        <section className="px-4 md:px-0 pb-6">
-          <div className="bg-black/20 backdrop-blur-xl p-4 sm:p-6 rounded-3xl shadow-lg border border-white/10">
-            <label
-              htmlFor="prompt-input"
-              className="block text-xl font-bold text-white mb-3 px-2">
-              {t.generateNewVideo}
-            </label>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <textarea
-                id="prompt-input"
-                rows={2}
-                className="flex-grow bg-black/20 border border-white/10 rounded-2xl p-3.5 text-gray-200 focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-shadow duration-200 resize-none placeholder:text-gray-500"
-                placeholder={t.promptPlaceholder}
-                value={newPrompt}
-                onChange={(e) => setNewPrompt(e.target.value)}
-                aria-label="Prompt for new video generation"
-              />
-              <button
-                onClick={() => handleGenerateFromPrompt(newPrompt)}
-                disabled={!newPrompt.trim() || isSaving}
-                className="flex-shrink-0 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 disabled:bg-gray-700 disabled:cursor-not-allowed disabled:scale-100 text-base shadow-lg disabled:shadow-none">
-                <SparklesIcon className="w-5 h-5" />
-                <span>{t.generate}</span>
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <main className="px-4 md:px-0 pb-8">
+        <main className="px-4 md:px-0 pb-40">
           <VideoGrid
             videos={sortedVideos}
             onPlayVideo={handlePlayVideo}
@@ -288,6 +290,11 @@ export const App: React.FC = () => {
           onSelectKey={async () => await window.aistudio?.openSelectKey()}
         />
       )}
+      <StyleRefiner
+        onGenerate={handleGenerateFromPrompt}
+        onOptimize={handleOptimizePrompt}
+        isBusy={isSaving}
+      />
     </div>
   );
 };

@@ -13,6 +13,7 @@ const translations = {
     promptPlaceholder:
       'e.g., A cinematic shot of a koala bear DJing in a forest',
     generate: 'Generate',
+    generating: 'Generating...',
     generatingFrom: 'Generated: "{prompt}"',
     remixOf: 'Remix of "{title}"',
     generationFailed: 'Generation Failed',
@@ -38,6 +39,7 @@ const translations = {
     favoriteVideo: 'Favorite Video',
     unfavoriteVideo: 'Unfavorite Video',
     deleteVideo: 'Delete Video',
+    aiOptimization: 'AI Optimization',
   },
   'zh-TW': {
     galleryTitle: 'Veo 畫廊',
@@ -46,6 +48,7 @@ const translations = {
     generateNewVideo: '生成新影片',
     promptPlaceholder: '例如：一隻無尾熊在森林裡當 DJ 的電影鏡頭',
     generate: '生成',
+    generating: '生成中...',
     generatingFrom: '生成自：「{prompt}」',
     remixOf: '"{title}" 的混音版',
     generationFailed: '生成失敗',
@@ -71,6 +74,7 @@ const translations = {
     favoriteVideo: '收藏影片',
     unfavoriteVideo: '取消收藏',
     deleteVideo: '刪除影片',
+    aiOptimization: 'AI 優化',
   },
 };
 
